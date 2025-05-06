@@ -1,3 +1,5 @@
+import type { PageInfo } from './common.types';
+
 export interface Owner {
   login: string;
   avatarUrl: string;
@@ -25,11 +27,12 @@ export interface Repository {
   languages: {
     nodes: Language[];
   };
-}
-
-export interface PageInfo {
-  hasNextPage: boolean;
-  endCursor: string;
+  // Add other repository-specific fields as needed
+  // For example, from GET_REPOSITORY_DETAILS if it has more fields
+  // watchersCount?: number;
+  // forkCount?: number;
+  // openIssuesCount?: number;
+  // etc.
 }
 
 export interface RepositoriesResponse {
@@ -42,28 +45,6 @@ export interface RepositoriesResponse {
   };
 }
 
-export interface SearchRepositoriesResponse {
-  search: {
-    repositoryCount: number;
-    pageInfo: PageInfo;
-    edges: {
-      node: Repository;
-    }[];
-  };
-}
-
 export interface RepositoryDetailsResponse {
-  repository: Repository;
-}
-
-export interface SearchParams {
-  query?: string;
-  page: number;
-  perPage: number;
-}
-
-export interface PaginatedResult<T> {
-  data: T[];
-  totalCount: number;
-  pageInfo: PageInfo;
+  repository: Repository; // Assuming details might enhance the base Repository type in future
 } 

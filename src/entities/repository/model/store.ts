@@ -13,6 +13,7 @@ import type {
   SearchRepositoriesResponse,
   RepositoryDetailsResponse
 } from '../../../shared/api/types';
+import type { FetchPolicy } from '@apollo/client';
 
 // Количество репозиториев на страницу
 const ITEMS_PER_PAGE = 10;
@@ -26,13 +27,15 @@ export const fetchRepositoriesTrigger = createEvent();
 
 // Effects
 export const fetchUserRepositoriesFx = createEffect(async (params: { perPage: number; endCursor: string | null }) => {
+  console.log('[DEBUG store.ts] fetchUserRepositoriesFx called. githubClient is:', githubClient);
+  console.log('[DEBUG store.ts] GET_USER_REPOSITORIES query object is:', GET_USER_REPOSITORIES);
   const { data } = await githubClient.query<RepositoriesResponse>({
     query: GET_USER_REPOSITORIES,
     variables: {
       first: params.perPage,
       after: params.endCursor,
     },
-    fetchPolicy: 'cache-first', // Принудительно используем сеть, избегая кеш
+    fetchPolicy: 'network-only' as FetchPolicy,
   });
   
   return {
@@ -50,7 +53,7 @@ export const searchRepositoriesFx = createEffect(async (params: { query: string;
       first: params.perPage,
       after: params.endCursor,
     },
-    fetchPolicy: 'cache-first', // Принудительно используем сеть, избегая кеш
+    fetchPolicy: 'network-only' as FetchPolicy,
   });
   
   return {
@@ -64,7 +67,7 @@ export const fetchRepositoryDetailsFx = createEffect(async (params: { owner: str
   const { data } = await githubClient.query<RepositoryDetailsResponse>({
     query: GET_REPOSITORY_DETAILS,
     variables: { owner: params.owner, name: params.name },
-    fetchPolicy: 'cache-first', // Принудительно используем сеть, избегая кеш
+    fetchPolicy: 'network-only' as FetchPolicy,
   });
   
   return data.repository;
@@ -124,45 +127,48 @@ $error
 $totalCount
   .on(fetchUserRepositoriesFx.doneData, (_, { totalCount }) => totalCount)
   .on(searchRepositoriesFx.doneData, (_, { totalCount }) => totalCount)
-  .reset(resetRepositories);
+  .reset(resetRepositories); // Reset total count when repositories are reset
 
 $hasNextPage
   .on(fetchUserRepositoriesFx.doneData, (_, { pageInfo }) => pageInfo.hasNextPage)
   .on(searchRepositoriesFx.doneData, (_, { pageInfo }) => pageInfo.hasNextPage)
-  .reset(resetRepositories);
+  .reset(resetRepositories); // Reset hasNextPage when repositories are reset
 
 $endCursor
   .on(fetchUserRepositoriesFx.doneData, (_, { pageInfo }) => pageInfo.endCursor)
   .on(searchRepositoriesFx.doneData, (_, { pageInfo }) => pageInfo.endCursor)
-  .reset(resetRepositories);
+  .reset(resetRepositories); // Reset endCursor when repositories are reset
 
 // Сохраняем маппинг страниц к курсорам для правильной пагинации
+// $pageMap stores cursors for subsequent pages. pageMap[N] is the cursor to fetch page N.
 $pageMap
   .on(fetchUserRepositoriesFx.doneData, (state, { pageInfo }) => {
     const currentPage = $searchParams.getState().page;
     return {
       ...state,
-      [currentPage + 1]: pageInfo.endCursor
+      [currentPage + 1]: pageInfo.endCursor // Store cursor for the next page
     };
   })
   .on(searchRepositoriesFx.doneData, (state, { pageInfo }) => {
     const currentPage = $searchParams.getState().page;
     return {
       ...state,
-      [currentPage + 1]: pageInfo.endCursor
+      [currentPage + 1]: pageInfo.endCursor // Store cursor for the next page
     };
   })
   .reset(resetRepositories);
 
 // Reset repositories and pageMap when query changes
+// This ensures that changing the search query effectively resets pagination and repository list for the new query
 sample({
   source: $searchParams,
   clock: setSearchParams,
   filter: (state, params) => params.query !== undefined && params.query !== state.query,
-  target: [resetRepositories, fetchRepositoriesTrigger],
+  target: [resetRepositories, fetchRepositoriesTrigger], // Also reset $pageMap via resetRepositories
 });
 
 // Reset page to 1 when query changes
+// If the search query changes, pagination should reset to the first page
 sample({
   source: $searchParams,
   clock: setSearchParams,
@@ -172,8 +178,9 @@ sample({
 });
 
 // Единый механизм запуска запросов
+// Central logic to determine whether to fetch user's repositories or search repositories
 export const fetchRepositoriesLogic = sample({
-  clock: [setSearchParams, fetchRepositoriesTrigger],
+  clock: [setSearchParams, fetchRepositoriesTrigger], // Trigger on search param changes or manual trigger
   source: $searchParams,
   fn: (params) => {
     const page = params.page || 1;
@@ -195,12 +202,14 @@ type FetchRepoLogicResult = {
 };
 
 // Для пользовательских репозиториев
+// Fetch user repositories if there's no search query
 sample({
   clock: fetchRepositoriesLogic,
   source: $pageMap,
   filter: (_, payload: FetchRepoLogicResult) => !payload.hasQuery,
   fn: (pageMap, payload: FetchRepoLogicResult) => {
     // Для первой страницы курсор всегда null
+    // For the first page, the cursor is always null. For subsequent pages, use the stored cursor.
     const endCursor = payload.page === 1 ? null : pageMap[payload.page] || null;
     
     return {
@@ -212,12 +221,14 @@ sample({
 });
 
 // Для поиска репозиториев
+// Fetch search results if there is a search query
 sample({
   clock: fetchRepositoriesLogic,
   source: $pageMap,
   filter: (_, payload: FetchRepoLogicResult) => !!payload.hasQuery,
   fn: (pageMap, payload: FetchRepoLogicResult) => {
     // Для первой страницы курсор всегда null
+    // For the first page, the cursor is always null. For subsequent pages, use the stored cursor.
     const endCursor = payload.page === 1 ? null : pageMap[payload.page] || null;
     
     return {

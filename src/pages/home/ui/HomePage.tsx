@@ -62,6 +62,12 @@ export const HomePage = () => {
           )}
         </div>
         
+        {error && (
+          <div className="mb-4 p-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
+            <span className="font-medium">Ошибка!</span> {error.message || 'Не удалось загрузить данные.'}
+          </div>
+        )}
+        
         <RepositoryList 
           repositories={repositories} 
           loading={loading} 
