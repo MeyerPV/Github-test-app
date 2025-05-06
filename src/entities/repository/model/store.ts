@@ -31,6 +31,7 @@ export const fetchUserRepositoriesFx = createEffect(async (params: { perPage: nu
       first: params.perPage,
       after: params.endCursor,
     },
+    fetchPolicy: 'no-cache',
   });
   
   return {
@@ -48,6 +49,7 @@ export const searchRepositoriesFx = createEffect(async (params: { query: string;
       first: params.perPage,
       after: params.endCursor,
     },
+    fetchPolicy: 'no-cache',
   });
   
   return {
@@ -146,10 +148,15 @@ export const fetchRepositories = createEffect(() => {
   // Если запрашиваемая страница - первая, курсор должен быть null
   const cursorForRequest = searchParams.page === 1 ? null : endCursor;
   
+  // ЛОГИРОВАНИЕ
+  console.log(`[fetchRepositories] Triggered. Page: ${searchParams.page}, Query: '${searchParams.query}', Cursor Used:`, cursorForRequest);
+  
   if (!searchParams.query) {
+    console.log('[fetchRepositories] Calling fetchUserRepositoriesFx with cursor:', cursorForRequest);
     return fetchUserRepositoriesFx({ perPage: searchParams.perPage, endCursor: cursorForRequest });
   }
   
+  console.log('[fetchRepositories] Calling searchRepositoriesFx with cursor:', cursorForRequest);
   return searchRepositoriesFx({ 
     query: searchParams.query, 
     perPage: searchParams.perPage, 

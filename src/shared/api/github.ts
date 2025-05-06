@@ -1,5 +1,15 @@
 import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
+import type { FetchPolicy, FieldFunctionOptions } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
+
+// Определяем типы для существующих и входящих данных для merge функций
+type SearchResult = {
+  edges?: { node: unknown }[];
+  pageInfo?: { hasNextPage: boolean; endCursor: string };
+  repositoryCount?: number;
+} | null | undefined;
+
+// Тип для ViewerRepositoriesResult больше не нужен для merge
 
 // Инициализируем HTTP линк для GitHub GraphQL API
 const httpLink = createHttpLink({
@@ -34,20 +44,21 @@ export const createGithubClient = () => new ApolloClient({
         fields: {
           // Настраиваем кэширование запросов поиска и репозиториев
           search: {
-            keyArgs: ['query', 'type'],
-            merge(existing = { edges: [] }, incoming, { args }) {
-              // Если это первая страница, возвращаем входящие данные
-              if (!args?.after) {
+            keyArgs: ["query", "type"],
+            merge(existing: SearchResult, incoming: SearchResult, { args }: FieldFunctionOptions) {
+              const existingEdges = existing?.edges ?? [];
+              const incomingEdges = incoming?.edges ?? [];
+              if (!args || !args?.after) {
                 return incoming;
               }
-              
-              // Для последующих страниц объединяем результаты
               return {
                 ...incoming,
-                edges: [...existing.edges, ...incoming.edges],
+                // Объединяем безопасно
+                edges: [...existingEdges, ...incomingEdges],
               };
             },
           },
+          // Возвращаем простую merge политику для viewer
           viewer: {
             merge: true,
           },
@@ -61,7 +72,7 @@ export const createGithubClient = () => new ApolloClient({
       errorPolicy: 'all',
     },
     query: {
-      fetchPolicy: 'cache-first',
+      fetchPolicy: 'cache-and-network' as FetchPolicy,
       errorPolicy: 'all',
     },
     mutate: {
