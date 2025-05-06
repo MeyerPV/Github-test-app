@@ -143,14 +143,17 @@ export const fetchRepositories = createEffect(() => {
   const searchParams = $searchParams.getState();
   const endCursor = $endCursor.getState();
   
+  // Если запрашиваемая страница - первая, курсор должен быть null
+  const cursorForRequest = searchParams.page === 1 ? null : endCursor;
+  
   if (!searchParams.query) {
-    return fetchUserRepositoriesFx({ perPage: searchParams.perPage, endCursor });
+    return fetchUserRepositoriesFx({ perPage: searchParams.perPage, endCursor: cursorForRequest });
   }
   
   return searchRepositoriesFx({ 
     query: searchParams.query, 
     perPage: searchParams.perPage, 
-    endCursor 
+    endCursor: cursorForRequest 
   });
 });
 
