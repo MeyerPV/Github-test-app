@@ -22,6 +22,7 @@ const ITEMS_PER_PAGE = 10;
 export const setSearchParams = createEvent<Partial<SearchParams>>();
 export const resetRepositories = createEvent();
 export const resetCurrentRepository = createEvent();
+export const fetchRepositoriesTrigger = createEvent();
 
 // Effects
 export const fetchUserRepositoriesFx = createEffect(async (params: { perPage: number; endCursor: string | null }) => {
@@ -31,7 +32,7 @@ export const fetchUserRepositoriesFx = createEffect(async (params: { perPage: nu
       first: params.perPage,
       after: params.endCursor,
     },
-    fetchPolicy: 'no-cache',
+    fetchPolicy: 'cache-first', // Принудительно используем сеть, избегая кеш
   });
   
   return {
@@ -49,7 +50,7 @@ export const searchRepositoriesFx = createEffect(async (params: { query: string;
       first: params.perPage,
       after: params.endCursor,
     },
-    fetchPolicy: 'no-cache',
+    fetchPolicy: 'cache-first', // Принудительно используем сеть, избегая кеш
   });
   
   return {
@@ -63,6 +64,7 @@ export const fetchRepositoryDetailsFx = createEffect(async (params: { owner: str
   const { data } = await githubClient.query<RepositoryDetailsResponse>({
     query: GET_REPOSITORY_DETAILS,
     variables: { owner: params.owner, name: params.name },
+    fetchPolicy: 'cache-first', // Принудительно используем сеть, избегая кеш
   });
   
   return data.repository;
@@ -82,6 +84,7 @@ export const $error = createStore<Error | null>(null);
 export const $totalCount = createStore(0);
 export const $hasNextPage = createStore(false);
 export const $endCursor = createStore<string | null>(null);
+export const $pageMap = createStore<Record<number, string | null>>({});
 
 // Persistence
 persist({
@@ -95,10 +98,11 @@ $searchParams.on(setSearchParams, (state, payload) => ({
   ...payload,
 }));
 
+// Единая логика обработки данных для обоих типов запросов
 $repositories
   .on(resetRepositories, () => [])
-  .on(fetchUserRepositoriesFx.doneData, (state, { repositories }) => repositories)
-  .on(searchRepositoriesFx.doneData, (state, { repositories }) => repositories);
+  .on(fetchUserRepositoriesFx.doneData, (_, { repositories }) => repositories)
+  .on(searchRepositoriesFx.doneData, (_, { repositories }) => repositories);
 
 $currentRepository
   .on(resetCurrentRepository, () => null)
@@ -132,41 +136,95 @@ $endCursor
   .on(searchRepositoriesFx.doneData, (_, { pageInfo }) => pageInfo.endCursor)
   .reset(resetRepositories);
 
-// Reset repositories when query changes
+// Сохраняем маппинг страниц к курсорам для правильной пагинации
+$pageMap
+  .on(fetchUserRepositoriesFx.doneData, (state, { pageInfo }) => {
+    const currentPage = $searchParams.getState().page;
+    return {
+      ...state,
+      [currentPage + 1]: pageInfo.endCursor
+    };
+  })
+  .on(searchRepositoriesFx.doneData, (state, { pageInfo }) => {
+    const currentPage = $searchParams.getState().page;
+    return {
+      ...state,
+      [currentPage + 1]: pageInfo.endCursor
+    };
+  })
+  .reset(resetRepositories);
+
+// Reset repositories and pageMap when query changes
 sample({
   source: $searchParams,
   clock: setSearchParams,
   filter: (state, params) => params.query !== undefined && params.query !== state.query,
-  target: resetRepositories,
+  target: [resetRepositories, fetchRepositoriesTrigger],
 });
 
-// Logic
-export const fetchRepositories = createEffect(() => {
-  const searchParams = $searchParams.getState();
-  const endCursor = $endCursor.getState();
-  
-  // Если запрашиваемая страница - первая, курсор должен быть null
-  const cursorForRequest = searchParams.page === 1 ? null : endCursor;
-  
-  // ЛОГИРОВАНИЕ
-  console.log(`[fetchRepositories] Triggered. Page: ${searchParams.page}, Query: '${searchParams.query}', Cursor Used:`, cursorForRequest);
-  
-  if (!searchParams.query) {
-    console.log('[fetchRepositories] Calling fetchUserRepositoriesFx with cursor:', cursorForRequest);
-    return fetchUserRepositoriesFx({ perPage: searchParams.perPage, endCursor: cursorForRequest });
-  }
-  
-  console.log('[fetchRepositories] Calling searchRepositoriesFx with cursor:', cursorForRequest);
-  return searchRepositoriesFx({ 
-    query: searchParams.query, 
-    perPage: searchParams.perPage, 
-    endCursor: cursorForRequest 
-  });
-});
-
-// Update stores on query or page change
+// Reset page to 1 when query changes
 sample({
   source: $searchParams,
   clock: setSearchParams,
-  target: fetchRepositories,
+  filter: (state, params) => params.query !== undefined && params.query !== state.query,
+  fn: (state) => ({ ...state, page: 1 }),
+  target: $searchParams,
+});
+
+// Единый механизм запуска запросов
+export const fetchRepositoriesLogic = sample({
+  clock: [setSearchParams, fetchRepositoriesTrigger],
+  source: $searchParams,
+  fn: (params) => {
+    const page = params.page || 1;
+    const hasQuery = !!params.query;
+    
+    return { 
+      params,
+      hasQuery,
+      page
+    };
+  }
+});
+
+// Тип для результата fetchRepositoriesLogic
+type FetchRepoLogicResult = {
+  params: SearchParams;
+  hasQuery: boolean;
+  page: number;
+};
+
+// Для пользовательских репозиториев
+sample({
+  clock: fetchRepositoriesLogic,
+  source: $pageMap,
+  filter: (_, payload: FetchRepoLogicResult) => !payload.hasQuery,
+  fn: (pageMap, payload: FetchRepoLogicResult) => {
+    // Для первой страницы курсор всегда null
+    const endCursor = payload.page === 1 ? null : pageMap[payload.page] || null;
+    
+    return {
+      perPage: payload.params.perPage,
+      endCursor
+    };
+  },
+  target: fetchUserRepositoriesFx
+});
+
+// Для поиска репозиториев
+sample({
+  clock: fetchRepositoriesLogic,
+  source: $pageMap,
+  filter: (_, payload: FetchRepoLogicResult) => !!payload.hasQuery,
+  fn: (pageMap, payload: FetchRepoLogicResult) => {
+    // Для первой страницы курсор всегда null
+    const endCursor = payload.page === 1 ? null : pageMap[payload.page] || null;
+    
+    return {
+      query: payload.params.query || "",
+      perPage: payload.params.perPage,
+      endCursor
+    };
+  },
+  target: searchRepositoriesFx
 }); 

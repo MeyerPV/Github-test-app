@@ -7,7 +7,7 @@ import {
   $totalCount, 
   $searchParams,
   setSearchParams,
-  fetchRepositories
+  fetchRepositoriesTrigger
 } from '../../../entities/repository/model/store';
 import { SearchHeader } from '../../../widgets/SearchHeader';
 import { RepositoryList } from '../../../entities/repository/ui/RepositoryList';
@@ -20,13 +20,15 @@ export const HomePage = () => {
     loading, 
     error, 
     totalCount, 
-    searchParams
+    searchParams,
+    trigger
   ] = useUnit([
     $repositories, 
     $loading, 
     $error, 
     $totalCount, 
-    $searchParams
+    $searchParams,
+    fetchRepositoriesTrigger
   ]);
   
   const totalPages = Math.ceil(totalCount / searchParams.perPage);
@@ -36,9 +38,9 @@ export const HomePage = () => {
     setSearchParams({ page });
   };
   
-  // Загружаем данные при монтировании
+  // Загружаем данные при монтировании компонента
   useEffect(() => {
-    fetchRepositories();
+    trigger();
   }, []);
   
   return (
