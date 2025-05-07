@@ -1,6 +1,6 @@
 import { gql } from '@apollo/client';
 
-// Фрагмент для репозитория с базовыми полями
+// Fragment for repository with basic fields
 export const REPOSITORY_FRAGMENT = gql`
   fragment RepositoryFields on Repository {
     id
@@ -30,7 +30,7 @@ export const REPOSITORY_FRAGMENT = gql`
   }
 `;
 
-// Запрос для получения репозиториев пользователя (аутентифицированного)
+// Query to get repositories of the (authenticated) user
 export const GET_USER_REPOSITORIES = gql`
   query GetUserRepositories($first: Int!, $after: String) {
     viewer {
@@ -49,7 +49,7 @@ export const GET_USER_REPOSITORIES = gql`
   ${REPOSITORY_FRAGMENT}
 `;
 
-// Запрос для получения детальной информации о репозитории
+// Query to get detailed information about a repository
 export const GET_REPOSITORY_DETAILS = gql`
   query GetRepositoryDetails($owner: String!, $name: String!) {
     repository(owner: $owner, name: $name) {

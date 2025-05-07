@@ -2,26 +2,41 @@ import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
 import type { FetchPolicy } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 
-// Инициализируем HTTP линк
+// Initialize HTTP link
 const httpLink = createHttpLink({
   uri: 'https://api.github.com/graphql',
 });
 
-// Функция получения токена
+// Function to get token
 export const getToken = (): string => {
-  console.log('[DEBUG] getToken called');
   const tokenFromStorage = localStorage.getItem('github_token');
   const tokenFromEnv = import.meta.env.VITE_GITHUB_TOKEN;
-  console.log('[DEBUG] Token from localStorage:', tokenFromStorage);
-  console.log('[DEBUG] Token from env:', tokenFromEnv);
   const token = tokenFromStorage || tokenFromEnv || '';
-  console.log('[DEBUG] Final token being used:', token ? 'TOKEN_PRESENT' : 'TOKEN_EMPTY');
   return token;
 };
 
-// Auth линк
+// Function to save token to localStorage
+export const saveTokenToLocalStorage = (token: string): void => {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('github_token', token);
+    console.log('Token saved to localStorage');
+  } else {
+    console.warn('localStorage is not available. Token not saved.');
+  }
+};
+
+// Function to clear token from localStorage
+export const clearTokenFromLocalStorage = (): void => {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('github_token');
+    console.log('Token cleared from localStorage');
+  } else {
+    console.warn('localStorage is not available. Token not cleared.');
+  }
+};
+
+// Auth link
 const authLink = setContext((_, { headers }) => {
-  console.log('[DEBUG] authLink setContext called');
   const token = getToken();
   return {
     headers: {
@@ -31,8 +46,7 @@ const authLink = setContext((_, { headers }) => {
   };
 });
 
-console.log('[DEBUG] About to create Apollo Client instance');
-// Создаем Apollo Client
+// Create Apollo Client
 export const createGithubClient = () => new ApolloClient({
   link: authLink.concat(httpLink),
   cache: new InMemoryCache(),
@@ -52,18 +66,18 @@ export const createGithubClient = () => new ApolloClient({
 });
 
 export const githubClient = createGithubClient();
-console.log('[DEBUG] Apollo Client instance created:', githubClient);
+// console.log('[DEBUG] Apollo Client instance created:', githubClient);
 
 // For diagnostics: attempt to clear the Apollo Client cache on startup
-if (githubClient && typeof githubClient.clearStore === 'function') {
-  console.log('[DEBUG] Attempting to clear Apollo Client cache on startup');
-  githubClient.clearStore().then(() => {
-    console.log('[DEBUG] Apollo Client cache cleared successfully on startup');
-  }).catch(err => {
-    console.error('[DEBUG] Error clearing Apollo Client cache on startup:', err);
-  });
-} else if (githubClient) {
-  console.warn('[DEBUG] githubClient.clearStore is not a function. Cache not cleared.');
-} else {
-  console.warn('[DEBUG] githubClient is not available. Cache not cleared.');
-} 
+// if (githubClient && typeof githubClient.clearStore === 'function') {
+//   console.log('[DEBUG] Attempting to clear Apollo Client cache on startup');
+//   githubClient.clearStore().then(() => {
+//     console.log('[DEBUG] Apollo Client cache cleared successfully on startup');
+//   }).catch(err => {
+//     console.error('[DEBUG] Error clearing Apollo Client cache on startup:', err);
+//   });
+// } else if (githubClient) {
+//   console.warn('[DEBUG] githubClient.clearStore is not a function. Cache not cleared.');
+// } else {
+//   console.warn('[DEBUG] githubClient is not available. Cache not cleared.');
+// } 

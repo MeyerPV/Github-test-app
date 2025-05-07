@@ -21,13 +21,13 @@ export const RepositoryCard = ({ repository, detailed = false }: RepositoryCardP
     languages,
   } = repository;
 
-  // Форматируем дату последнего коммита
+  // Format the last commit date
   const lastCommitDate = defaultBranchRef?.target.committedDate
     ? formatDistanceToNow(new Date(defaultBranchRef.target.committedDate), {
         addSuffix: true,
         locale: ru,
       })
-    : 'Нет данных';
+    : 'No data';
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -58,7 +58,7 @@ export const RepositoryCard = ({ repository, detailed = false }: RepositoryCardP
               </span>
               
               <span className="text-sm text-slate-600">
-                Последний коммит: {lastCommitDate}
+                Last commit: {lastCommitDate}
               </span>
             </div>
           </div>
@@ -97,7 +97,7 @@ export const RepositoryCard = ({ repository, detailed = false }: RepositoryCardP
             
             {languages.nodes.length > 0 && (
               <div className="mt-4">
-                <h3 className="text-sm font-medium text-slate-700 mb-2">Языки:</h3>
+                <h3 className="text-sm font-medium text-slate-700 mb-2">Languages:</h3>
                 <div className="flex flex-wrap gap-2">
                   {languages.nodes.map((lang) => (
                     <Badge

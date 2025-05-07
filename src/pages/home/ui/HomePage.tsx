@@ -12,6 +12,7 @@ import {
 import { SearchHeader } from '../../../widgets/SearchHeader';
 import { RepositoryList } from '../../../entities/repository/ui/RepositoryList';
 import { Pagination } from '../../../shared/ui/Pagination';
+import { TokenManager } from '../../../widgets/TokenManager/ui/TokenManager';
 
 export const HomePage = () => {
   // Получаем данные из стора
@@ -48,7 +49,9 @@ export const HomePage = () => {
       <SearchHeader />
       
       <main className="container mt-6">
-        <div className="flex justify-between items-center mb-6">
+        <TokenManager />
+
+        <div className="flex justify-between items-center mb-6 mt-6">
           <h2 className="text-xl font-semibold text-slate-800">
             {searchParams.query 
               ? `Результаты поиска: ${searchParams.query}` 

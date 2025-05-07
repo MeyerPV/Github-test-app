@@ -22,7 +22,7 @@ export const RepositoryList = ({
   if (error) {
     return (
       <div className="p-6 text-center bg-red-50 text-red-600 rounded-lg">
-        <p className="font-medium">Ошибка при загрузке данных</p>
+        <p className="font-medium">Error loading data</p>
         <p className="text-sm mt-1">{error.message}</p>
       </div>
     );
@@ -31,7 +31,7 @@ export const RepositoryList = ({
   if (repositories.length === 0 && !loading) { // Added !loading to prevent showing this if skeleton is shown
     return (
       <div className="text-center py-10 text-slate-500">
-        <p>Репозитории не найдены</p>
+        <p>Repositories not found</p>
       </div>
     );
   }
