@@ -22,7 +22,7 @@ export const WithApollo = ({ children }: WithApolloProps) => {
   // Создаем новый клиент при изменении токена
   const client = useMemo(() => {
     return createGithubClient();
-  }, [token]);
+  }, []);
 
   const handleSaveToken = () => {
     if (tokenInput) {
