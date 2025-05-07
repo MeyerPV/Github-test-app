@@ -72,6 +72,7 @@ export const HomePage = () => {
           repositories={repositories} 
           loading={loading} 
           error={error}
+          itemsPerPage={searchParams.perPage}
         />
         
         {totalPages > 1 && (

@@ -1,20 +1,22 @@
 import type { Repository } from '../../../shared/api/types';
 import { RepositoryCard } from './RepositoryCard';
-import { Spinner } from '../../../shared/ui/Spinner';
+import { RepositoryListSkeleton } from './RepositoryListSkeleton';
 
 export interface RepositoryListProps {
   repositories: Repository[];
   loading?: boolean;
   error?: Error | null;
+  itemsPerPage?: number; // To pass to skeleton for correct count
 }
 
-export const RepositoryList = ({ repositories, loading = false, error = null }: RepositoryListProps) => {
-  if (loading) {
-    return (
-      <div className="flex justify-center py-10">
-        <Spinner />
-      </div>
-    );
+export const RepositoryList = ({ 
+  repositories, 
+  loading = false, 
+  error = null,
+  itemsPerPage = 10
+}: RepositoryListProps) => {
+  if (loading && repositories.length === 0) {
+    return <RepositoryListSkeleton count={itemsPerPage} />;
   }
 
   if (error) {
@@ -26,7 +28,7 @@ export const RepositoryList = ({ repositories, loading = false, error = null }: 
     );
   }
 
-  if (repositories.length === 0) {
+  if (repositories.length === 0 && !loading) { // Added !loading to prevent showing this if skeleton is shown
     return (
       <div className="text-center py-10 text-slate-500">
         <p>Репозитории не найдены</p>

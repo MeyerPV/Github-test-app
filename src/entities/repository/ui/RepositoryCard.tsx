@@ -35,13 +35,13 @@ export const RepositoryCard = ({ repository, detailed = false }: RepositoryCardP
         <div className="flex justify-between items-start mb-2">
           <div>
             {detailed ? (
-              <h1 className="text-xl font-bold text-slate-800">{name}</h1>
+              <h1 className="text-xl font-bold text-slate-800">{`${owner.login}/${name}`}</h1>
             ) : (
               <Link
                 to={`/repository/${owner.login}/${name}`}
-                className="text-xl font-bold text-blue-600 hover:text-blue-800"
+                className="text-xl font-bold text-blue-600 hover:text-blue-800 break-all"
               >
-                {name}
+                {`${owner.login}/${name}`}
               </Link>
             )}
             

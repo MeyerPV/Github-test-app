@@ -87,11 +87,6 @@ export const $hasNextPage = createStore(false);
 export const $endCursor = createStore<string | null>(null);
 export const $pageMap = createStore<Record<number, string | null>>({});
 
-// Helper store to track if the last operation was a search
-const $wasSearchActive = createStore(false)
-  .on(searchRepositoriesFx.doneData, () => true) // Set on successful search data
-  .on(fetchUserRepositoriesFx.doneData, () => false); // Reset on successful user repos data
-
 // Persistence
 persist({
   store: $searchParams,
@@ -115,19 +110,9 @@ $currentRepository
   .on(fetchRepositoryDetailsFx.doneData, (_, repository) => repository);
 
 $loading
-  // For fetchUserRepositoriesFx
-  .on(fetchUserRepositoriesFx.pending, (_, isPending) => {
-    if (!isPending) return false; // Should not happen if called on .pending(true)
-    const repositoriesEmpty = $repositories.getState().length === 0;
-    const switchedFromSearch = $wasSearchActive.getState();
-    // Show loader only if repositories are empty OR we just switched from search mode
-    return repositoriesEmpty || switchedFromSearch;
-  })
-  // For searchRepositoriesFx - show loader when pending
+  .on(fetchUserRepositoriesFx.pending, (_, isPending) => isPending)
   .on(searchRepositoriesFx.pending, (_, isPending) => isPending)
-  // For fetchRepositoryDetailsFx - show loader when pending
   .on(fetchRepositoryDetailsFx.pending, (_, isPending) => isPending)
-
   // Hide loader when any of these effects complete or fail
   .on([fetchUserRepositoriesFx.finally, searchRepositoriesFx.finally, fetchRepositoryDetailsFx.finally], () => false);
 
