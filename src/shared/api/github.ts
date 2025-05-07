@@ -42,7 +42,7 @@ export const createGithubClient = () => new ApolloClient({
       errorPolicy: 'all',
     },
     query: {
-      fetchPolicy: 'network-only' as FetchPolicy,
+      fetchPolicy: 'cache-first' as FetchPolicy,
       errorPolicy: 'all',
     },
     mutate: {

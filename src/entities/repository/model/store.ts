@@ -27,15 +27,13 @@ export const fetchRepositoriesTrigger = createEvent();
 
 // Effects
 export const fetchUserRepositoriesFx = createEffect(async (params: { perPage: number; endCursor: string | null }) => {
-  console.log('[DEBUG store.ts] fetchUserRepositoriesFx called. githubClient is:', githubClient);
-  console.log('[DEBUG store.ts] GET_USER_REPOSITORIES query object is:', GET_USER_REPOSITORIES);
   const { data } = await githubClient.query<RepositoriesResponse>({
     query: GET_USER_REPOSITORIES,
     variables: {
       first: params.perPage,
       after: params.endCursor,
     },
-    fetchPolicy: 'network-only' as FetchPolicy,
+    fetchPolicy: 'cache-first' as FetchPolicy,
   });
   
   return {
@@ -53,7 +51,7 @@ export const searchRepositoriesFx = createEffect(async (params: { query: string;
       first: params.perPage,
       after: params.endCursor,
     },
-    fetchPolicy: 'network-only' as FetchPolicy,
+    fetchPolicy: 'cache-first' as FetchPolicy,
   });
   
   return {
@@ -67,7 +65,7 @@ export const fetchRepositoryDetailsFx = createEffect(async (params: { owner: str
   const { data } = await githubClient.query<RepositoryDetailsResponse>({
     query: GET_REPOSITORY_DETAILS,
     variables: { owner: params.owner, name: params.name },
-    fetchPolicy: 'network-only' as FetchPolicy,
+    fetchPolicy: 'cache-first' as FetchPolicy,
   });
   
   return data.repository;
@@ -88,6 +86,11 @@ export const $totalCount = createStore(0);
 export const $hasNextPage = createStore(false);
 export const $endCursor = createStore<string | null>(null);
 export const $pageMap = createStore<Record<number, string | null>>({});
+
+// Helper store to track if the last operation was a search
+const $wasSearchActive = createStore(false)
+  .on(searchRepositoriesFx.doneData, () => true) // Set on successful search data
+  .on(fetchUserRepositoriesFx.doneData, () => false); // Reset on successful user repos data
 
 // Persistence
 persist({
@@ -112,9 +115,21 @@ $currentRepository
   .on(fetchRepositoryDetailsFx.doneData, (_, repository) => repository);
 
 $loading
-  .on(fetchUserRepositoriesFx.pending, (_, pending) => pending)
-  .on(searchRepositoriesFx.pending, (_, pending) => pending)
-  .on(fetchRepositoryDetailsFx.pending, (_, pending) => pending);
+  // For fetchUserRepositoriesFx
+  .on(fetchUserRepositoriesFx.pending, (_, isPending) => {
+    if (!isPending) return false; // Should not happen if called on .pending(true)
+    const repositoriesEmpty = $repositories.getState().length === 0;
+    const switchedFromSearch = $wasSearchActive.getState();
+    // Show loader only if repositories are empty OR we just switched from search mode
+    return repositoriesEmpty || switchedFromSearch;
+  })
+  // For searchRepositoriesFx - show loader when pending
+  .on(searchRepositoriesFx.pending, (_, isPending) => isPending)
+  // For fetchRepositoryDetailsFx - show loader when pending
+  .on(fetchRepositoryDetailsFx.pending, (_, isPending) => isPending)
+
+  // Hide loader when any of these effects complete or fail
+  .on([fetchUserRepositoriesFx.finally, searchRepositoriesFx.finally, fetchRepositoryDetailsFx.finally], () => false);
 
 $error
   .on(fetchUserRepositoriesFx.failData, (_, error) => error)
