@@ -1,12 +1,12 @@
-import type { Repository } from '../../../shared/api/types';
-import { RepositoryCard } from './RepositoryCard';
-import { RepositoryListSkeleton } from './RepositoryListSkeleton';
+import type { Repository } from '../../../shared/api/types'; // Corrected path
+import { RepositoryCard } from '../../../entities/repository/ui/RepositoryCard'; // Path to entity component
+import { RepositoryListSkeleton } from './RepositoryListSkeleton'; // Corrected path
 
 export interface RepositoryListProps {
   repositories: Repository[];
   loading?: boolean;
   error?: Error | null;
-  itemsPerPage?: number; // To pass to skeleton for correct count
+  itemsPerPage?: number; 
 }
 
 export const RepositoryList = ({ 
@@ -28,7 +28,7 @@ export const RepositoryList = ({
     );
   }
 
-  if (repositories.length === 0 && !loading) { // Added !loading to prevent showing this if skeleton is shown
+  if (repositories.length === 0 && !loading) { 
     return (
       <div className="text-center py-10 text-slate-500">
         <p>Repositories not found</p>
@@ -39,6 +39,7 @@ export const RepositoryList = ({
   return (
     <div className="space-y-4">
       {repositories.map((repo) => (
+        // RepositoryCard is an entity, so it's imported from entities layer
         <RepositoryCard key={repo.id} repository={repo} />
       ))}
     </div>

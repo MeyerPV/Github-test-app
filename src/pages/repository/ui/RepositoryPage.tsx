@@ -3,10 +3,10 @@ import { useParams, Link } from 'react-router-dom';
 import { useUnit } from 'effector-react';
 import { 
   $currentRepository, 
-  $loading, 
-  $error,
-  fetchRepositoryDetailsFx,
-  resetCurrentRepository
+  $currentRepositoryLoading,
+  $currentRepositoryError,
+  resetCurrentRepository,
+  loadRepositoryDetails
 } from '../../../entities/repository/model/store';
 import { RepositoryCard } from '../../../entities/repository/ui/RepositoryCard';
 import { Spinner } from '../../../shared/ui/Spinner';
@@ -15,21 +15,29 @@ import { Button } from '../../../shared/ui/Button';
 export const RepositoryPage = () => {
   const { owner, name } = useParams<{ owner: string; name: string }>();
   
-  const [repository, loading, error] = useUnit([
+  const [
+    repository, 
+    loading,
+    error,
+    triggerLoadDetails,
+    triggerResetCurrentRepository
+  ] = useUnit([
     $currentRepository,
-    $loading,
-    $error
+    $currentRepositoryLoading,
+    $currentRepositoryError,
+    loadRepositoryDetails,
+    resetCurrentRepository
   ]);
   
   useEffect(() => {
     if (owner && name) {
-      fetchRepositoryDetailsFx({ owner, name });
+      triggerLoadDetails({ owner, name });
     }
     
     return () => {
-      resetCurrentRepository();
+      triggerResetCurrentRepository();
     };
-  }, [owner, name]);
+  }, [owner, name, triggerLoadDetails, triggerResetCurrentRepository]);
   
   if (loading) {
     return (
@@ -43,14 +51,14 @@ export const RepositoryPage = () => {
     return (
       <div className="min-h-screen bg-slate-50 container py-10">
         <div className="p-6 text-center bg-red-50 text-red-600 rounded-lg">
-          <p className="font-medium">Ошибка при загрузке репозитория</p>
+          <p className="font-medium">Error loading repository</p>
           <p className="text-sm mt-1">{error.message}</p>
           <Button
             variant="outline"
             className="mt-4"
             onClick={() => window.history.back()}
           >
-            Вернуться назад
+            Go back
           </Button>
         </div>
       </div>
@@ -61,10 +69,10 @@ export const RepositoryPage = () => {
     return (
       <div className="min-h-screen bg-slate-50 container py-10">
         <div className="text-center">
-          <p className="text-slate-600">Репозиторий не найден</p>
+          <p className="text-slate-600">Repository not found</p>
           <Link to="/">
             <Button variant="primary" className="mt-4">
-              Вернуться на главную
+              Back to main page
             </Button>
           </Link>
         </div>
@@ -90,7 +98,7 @@ export const RepositoryPage = () => {
                 d="M15 19l-7-7 7-7" 
               />
             </svg>
-            Вернуться к списку
+            Back to list
           </Link>
         </div>
       </div>

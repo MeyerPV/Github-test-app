@@ -7,10 +7,11 @@ import {
   $totalCount, 
   $searchParams,
   setSearchParams,
-  fetchRepositoriesTrigger
-} from '../../../entities/repository/model/store';
+  fetchRepositoriesTrigger,
+  appMounted
+} from '../../../features/repository-list/model/list.store';
 import { SearchHeader } from '../../../widgets/SearchHeader';
-import { RepositoryList } from '../../../entities/repository/ui/RepositoryList';
+import { RepositoryList } from '../../../features/repository-list/ui/RepositoryList';
 import { Pagination } from '../../../shared/ui/Pagination';
 import { TokenManager } from '../../../widgets/TokenManager/ui/TokenManager';
 
@@ -22,14 +23,16 @@ export const HomePage = () => {
     error, 
     totalCount, 
     searchParams,
-    trigger
+    trigger,
+    mountApp
   ] = useUnit([
     $repositories, 
     $loading, 
     $error, 
     $totalCount, 
     $searchParams,
-    fetchRepositoriesTrigger
+    fetchRepositoriesTrigger,
+    appMounted
   ]);
   
   const totalPages = Math.ceil(totalCount / searchParams.perPage);
@@ -42,7 +45,8 @@ export const HomePage = () => {
   // Загружаем данные при монтировании компонента
   useEffect(() => {
     trigger();
-  }, []);
+    mountApp();
+  }, [trigger, mountApp]);
   
   return (
     <div className="min-h-screen bg-slate-50 pb-10">

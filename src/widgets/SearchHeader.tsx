@@ -3,7 +3,7 @@ import { useUnit } from 'effector-react';
 import { useDebounce } from '../shared/hooks/useDebounce';
 import { Input } from '../shared/ui/Input';
 import { Button } from '../shared/ui/Button';
-import { $searchParams, setSearchParams } from '../entities/repository/model/store';
+import { $searchParams, setSearchParams } from '../features/repository-list/model/list.store';
 
 export const SearchHeader = () => {
   const globalSearchParams = useUnit($searchParams);
